@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Stack de exemplo para o desafio da DIO - Primeira Stack com CloudFormation'
+
+Parameters:
+  InstanceTypeParameter:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t3.micro
+    Description: Tipo da instância EC2 (escolha compatível com Free Tier)
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Nome do par de chaves SSH existente para acessar a instância
+
+  BucketNamePrefix:
+    Type: String
+    Default: dio-cloudformation-bucket
+    Description: Prefixo para o nome do bucket S3 (será adicionado um sufixo único)
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-0c02fb55956c7d316  # Amazon Linux 2023 na us-east-1
+    us-west-2:
+      AMI: ami-0cb0d5e3b5e0e8e8a  # Amazon Linux 2023 na us-west-2
+    # Adicione outras regiões se necessário
+
+Resources:
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Permitir tráfego SSH e HTTP
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceTypeParameter
+      ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI]
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - !Ref WebServerSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "<h1>Olá da minha Stack CloudFormation! 🚀</h1><p>Instância: $(hostname)</p>" > /var/www/html/index.html
+
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${BucketNamePrefix}-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+
+Outputs:
+  WebsiteURL:
+    Description: URL pública da instância EC2 (use o IP abaixo com porta 80)
+    Value: !Sub 'http://${WebServerInstance.PublicIp}'
+  S3BucketName:
+    Description: Nome do bucket S3 criado
+    Value: !Ref MyS3Bucket
+  InstanceId:
+    Description: ID da instância EC2
+    Value: !Ref WebServerInstance
