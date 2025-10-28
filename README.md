@@ -32,7 +32,7 @@ A stack criada neste laboratório provisiona os seguintes recursos na AWS:
 
 ##  Template CloudFormation (Resumo)
 
-O arquivo [`cloudformation-template.yaml`](cloudformation-template.yaml) contém:
+O arquivo [`https://github.com/torres-alice/-Minha-Primeira-Stack-com-AWS-CloudFormation/blob/main/AWSTemplateFormatVersion.yaml`](cloudformation-template.yaml) contém:
 
 - **Parâmetros**: Região, tipo de instância, nome do bucket.
 - **Recursos**:
